@@ -1,0 +1,5 @@
+export const ROLES = ['super_admin', 'admin', 'teacher', 'parent', 'child'] as const;
+export type Role = typeof ROLES[number];
+export const ROLE_LABELS: Record<Role, string> = { super_admin: 'Super Administrator', admin: 'Administrator', teacher: 'Teacher', parent: 'Parent / Guardian', child: 'Child Learner' };
+export const CATEGORIES = ['Early literacy','Alphabet recognition','Phonics and pronunciation','Beginning reading','Numbers and counting','Addition and subtraction','Shapes','Colors','Matching','Sorting and classification','Patterns and sequencing','Nursery rhymes','Songs and listening','Memory games','Logic puzzles','Fine motor','Practical life','Nature and animals','Emotional intelligence','Creative activities'] as const;
+export type Activity = { id:string; title:string; description:string; category:string; minAge:number; maxAge:number; difficulty:'gentle'|'growing'|'stretch'; instructions:string[]; objective:string; activityType:string; media:string|null; questions:{prompt:string;choices:string[];answer:string}[]; completionCriteria:string; durationMinutes:number; accessibility:string[]; published:boolean };

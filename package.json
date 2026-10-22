@@ -1,0 +1,18 @@
+{
+  "name": "learnnest-platform",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["apps/web", "apps/api", "packages/shared"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c green,blue \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:web": "npm --workspace @learnnest/web run dev",
+    "dev:api": "npm --workspace @learnnest/api run dev",
+    "build": "npm run build --workspace @learnnest/shared && npm run build --workspace @learnnest/api && npm run build --workspace @learnnest/web",
+    "test": "npm --workspace @learnnest/api test",
+    "typecheck": "npm run build --workspace @learnnest/shared && npm run typecheck --workspace @learnnest/shared && npm run typecheck --workspace @learnnest/api && npm run typecheck --workspace @learnnest/web",
+    "seed:activities": "node supabase/seed/generate-activities.mjs",
+    "seed:demo": "npm --workspace @learnnest/api run seed:demo",
+    "seed:cloud-activities": "npm --workspace @learnnest/api run seed:activities"
+  },
+  "devDependencies": { "concurrently": "^9.1.2", "tsx": "^4.19.2", "typescript": "^5.7.2" }
+}

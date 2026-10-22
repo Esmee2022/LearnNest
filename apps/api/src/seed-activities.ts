@@ -1,0 +1,7 @@
+import dotenv from 'dotenv';import {resolve,dirname} from 'node:path';import {fileURLToPath} from 'node:url';import {readFile} from 'node:fs/promises';import {createClient} from '@supabase/supabase-js';
+dotenv.config({path:resolve(process.cwd(),'../../.env')});
+const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;if(!url||!key)throw new Error('Set Supabase URL and service role key in root .env');const client=createClient(url,key,{auth:{persistSession:false}});
+const source=resolve(dirname(fileURLToPath(import.meta.url)),'../../../supabase/seed/activities.generated.json');const activities=JSON.parse(await readFile(source,'utf8')) as any[];if(activities.length!==1000)throw new Error(`Expected 1000 activities, got ${activities.length}`);
+const mapped=activities.map(a=>({id:a.id,title:a.title,description:a.description,category:a.category,min_age:a.minAge,max_age:a.maxAge,difficulty:a.difficulty,instructions:a.instructions,objective:a.objective,activity_type:a.activityType,media:a.media,questions:a.questions,completion_criteria:a.completionCriteria,duration_minutes:a.durationMinutes,accessibility:a.accessibility,published_at:a.published?new Date().toISOString():null}));
+for(let start=0;start<mapped.length;start+=100){const {error}=await client.from('learning_activities').upsert(mapped.slice(start,start+100),{onConflict:'id'});if(error)throw error;console.log(`Seeded activities ${start+1}–${Math.min(start+100,mapped.length)}`);}
+console.log(`Seeded ${mapped.length} Montessori activity records.`);

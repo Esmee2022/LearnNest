@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: learnnest-api
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build --workspace @learnnest/shared && npm run build --workspace @learnnest/api
+    startCommand: npm run start --workspace @learnnest/api
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: PORT
+        value: "10000"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PASSWORD_PEPPER
+        sync: false
+      - key: PEPPER_VERSION
+        value: v1
+      - key: TOTP_ENCRYPTION_KEY
+        sync: false
+      - key: BACKUP_ENCRYPTION_KEY
+        sync: false
+      - key: BACKUP_STORAGE_BUCKET
+        value: learnnest-backups
+      - key: WEB_ORIGIN
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+  - type: web
+    runtime: static
+    name: learnnest-web
+    buildCommand: npm install && npm run build --workspace @learnnest/shared && npm run build --workspace @learnnest/web
+    staticPublishPath: apps/web/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false

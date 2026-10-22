@@ -1,0 +1,51 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const categories = [
+  {name:'Early literacy',objects:['story clues','picture cards','first sounds','book covers','rhyming pairs','name cards','word baskets','story stones','letter tiles','reading corners'],objective:'Build language awareness and connect spoken words with print.',verbs:['Notice','Name','Sort','Tell','Match'],type:'language'},
+  {name:'Alphabet recognition',objects:['letter m','letter s','letter a','letter t','letter b','letter p','letter r','letter f','letter c','letter n'],objective:'Recognize letter forms and connect each symbol with its name.',verbs:['Trace','Find','Match','Build','Notice'],type:'letter-work'},
+  {name:'Phonics and pronunciation',objects:['sun','map','fish','cup','leaf','moon','nest','sock','bell','rain'],objective:'Listen for beginning, middle, and ending sounds in familiar words.',verbs:['Listen','Stretch','Blend','Echo','Sort'],type:'sound-game'},
+  {name:'Beginning reading',objects:['short vowel words','three-sound words','picture sentences','word labels','simple directions','animal names','food words','garden words','family words','action words'],objective:'Use sound and picture clues to read familiar short words.',verbs:['Read','Build','Point','Choose','Retell'],type:'early-reading'},
+  {name:'Numbers and counting',objects:['shells','wooden beads','apple counters','buttons','pinecones','blocks','seed pods','toy animals','pebbles','clay balls'],objective:'Count objects with one-to-one correspondence and compare small groups.',verbs:['Count','Group','Compare','Arrange','Show'],type:'hands-on-counting'},
+  {name:'Addition and subtraction',objects:['garden seeds','bird counters','wooden blocks','apple slices','toy boats','button groups','shell collections','flower pots','bead bars','story problems'],objective:'Explore joining and taking away through concrete objects and stories.',verbs:['Combine','Take away','Show','Check','Tell'],type:'number-story'},
+  {name:'Shapes',objects:['circle','triangle','square','rectangle','oval','hexagon','sphere','cube','cone','cylinder'],objective:'Identify shape features and notice shapes in the environment.',verbs:['Find','Trace','Build','Compare','Describe'],type:'shape-exploration'},
+  {name:'Colors',objects:['warm colors','cool colors','leaf greens','sky blues','sunset colors','primary colors','light and dark','color pairs','garden colors','rainbow order'],objective:'Name, sort, and compare colors using familiar objects.',verbs:['Match','Sort','Name','Mix','Notice'],type:'color-work'},
+  {name:'Matching',objects:['animal homes','parent and baby animals','garden tools','shadows','texture pairs','sound pairs','picture halves','object silhouettes','daily routines','habitat pairs'],objective:'Find visual, sound, or meaning-based relationships between pairs.',verbs:['Pair','Notice','Remember','Compare','Explain'],type:'matching-game'},
+  {name:'Sorting and classification',objects:['leaves by edge','buttons by size','animals by habitat','objects by texture','foods by color','shells by pattern','tools by purpose','blocks by shape','seeds by size','picture groups'],objective:'Group objects by an observable feature and explain the sorting rule.',verbs:['Sort','Group','Compare','Re-sort','Explain'],type:'classification'},
+  {name:'Patterns and sequencing',objects:['bead patterns','leaf sequences','daily routines','growth stages','color trains','sound patterns','shape rows','story order','number lines','weather cycles'],objective:'Recognize repeating patterns and put familiar events in order.',verbs:['Continue','Build','Order','Predict','Create'],type:'sequencing'},
+  {name:'Nursery rhymes',objects:['rhyming words','repeated lines','story characters','steady beats','action words','sound patterns','beginning and ending','picture clues','verse order','rhyme pairs'],objective:'Hear rhyme, rhythm, and repeated language in short traditional verses.',verbs:['Listen','Clap','Repeat','Find','Sequence'],type:'listening'},
+  {name:'Songs and listening',objects:['high and low sounds','slow and fast beats','birdsong','rain sounds','quiet and loud','instrument families','sound walks','echo patterns','pause and listen','nature orchestra'],objective:'Practice careful listening and describe changes in sound.',verbs:['Listen','Move','Compare','Echo','Describe'],type:'audio-guided'},
+  {name:'Memory games',objects:['garden picture pairs','animal cards','shape sequence','sound sequence','object tray','color cards','movement pattern','number cards','nature objects','story details'],objective:'Strengthen attention and recall through short, playful challenges.',verbs:['Remember','Find','Repeat','Describe','Rebuild'],type:'memory'},
+  {name:'Logic puzzles',objects:['animal tracks','shape paths','which one differs','simple mazes','picture clues','cause and effect','two-step clues','block bridges','missing pieces','day and night clues'],objective:'Use clues, comparison, and trial-and-notice thinking to solve a problem.',verbs:['Explore','Choose','Test','Notice','Explain'],type:'reasoning'},
+  {name:'Fine motor',objects:['threading beads','tongs and pom-poms','folding cloths','clay coils','peg patterns','pouring practice','paper snips','button frames','posting cards','brush strokes'],objective:'Develop hand strength, coordination, and controlled movement.',verbs:['Transfer','Thread','Fold','Roll','Arrange'],type:'practical-work'},
+  {name:'Practical life',objects:['watering a plant','setting a snack place','folding napkins','polishing a leaf','sorting laundry','pouring water','washing a table','preparing fruit','caring for books','tidying a basket'],objective:'Practice independence, care, and orderly steps in familiar routines.',verbs:['Prepare','Practice','Complete','Care for','Arrange'],type:'life-skill'},
+  {name:'Nature and animals',objects:['butterfly life cycle','bird beaks','garden habitats','animal footprints','seed growth','weather signs','tree parts','pond life','day and night','animal coverings'],objective:'Observe living things and notice how they grow and meet their needs.',verbs:['Observe','Compare','Match','Describe','Investigate'],type:'nature-study'},
+  {name:'Emotional intelligence',objects:['naming feelings','calm breathing','asking for help','taking turns','kind words','body clues','solving small conflicts','welcoming a friend','trying again','noticing needs'],objective:'Recognize feelings, communicate needs, and practice caring responses.',verbs:['Notice','Name','Practice','Choose','Share'],type:'social-emotional'},
+  {name:'Creative activities',objects:['nature collage','clay garden','story drawing','color mixing','rhythm painting','loose-parts sculpture','sound map','shape printing','puppet story','pattern weaving'],objective:'Explore materials, make choices, and express an original idea.',verbs:['Create','Explore','Combine','Design','Share'],type:'open-ended'},
+];
+const ageBands=[{min:3,max:4,label:'Ages 3–4',difficulty:'gentle',level:'foundations'},{min:4,max:5,label:'Ages 4–5',difficulty:'growing',level:'building'},{min:5,max:7,label:'Ages 5–7',difficulty:'stretch',level:'flourishing'}];
+const formats=[
+  {suffix:'at the nature table',guide:'Choose a few real or picture objects. Give the child time to handle, look closely, and share what they notice.',criteria:'Complete the exploration and share one observation.'},
+  {suffix:'with a matching tray',guide:'Place the cards or objects in a small tray. Model one example, then invite the child to continue at their own pace.',criteria:'Complete at least three thoughtful matches or placements.'},
+  {suffix:'as a story walk',guide:'Read the prompt aloud together. Pause for the child to point, wonder, and tell what might happen next.',criteria:'Share an idea, prediction, or retelling.'},
+  {suffix:'with hands-on materials',guide:'Gather safe everyday materials. Demonstrate slowly, then let the child repeat, adapt, or stop when ready.',criteria:'Try the process and describe or show what changed.'},
+  {suffix:'as a find-and-notice game',guide:'Explore a familiar room or outdoor space. Invite the child to find examples and describe one feature at a time.',criteria:'Find two examples and name a feature they share.'},
+];
+const rows=[];
+for(let ci=0;ci<categories.length;ci++){
+  const category=categories[ci];
+  for(let oi=0;oi<category.objects.length;oi++){
+    const object=category.objects[oi];
+    for(let fi=0;fi<formats.length;fi++){
+      const format=formats[fi];const age=ageBands[(oi+fi)%ageBands.length];const verb=category.verbs[(oi+fi)%category.verbs.length];
+      const index=ci*50+oi*5+fi+1;
+      const title=`${verb} ${object} ${format.suffix}`;
+      const prompt=`What do you notice about ${object}?`;
+      rows.push({id:`LN-${String(index).padStart(4,'0')}`,title,description:`A ${age.label.toLowerCase()} Montessori-inspired ${category.name.toLowerCase()} invitation focused on ${object}. The child can explore through real materials, conversation, and unhurried repetition.`,category:category.name,minAge:age.min,maxAge:age.max,difficulty:age.difficulty,instructions:[format.guide,`Invite the child to ${verb.toLowerCase()} ${object}. Offer help only when asked and allow another attempt.`,`Pause together and talk about what was noticed; finish by returning materials to their place.`],objective:category.objective,activityType:category.type,media:null,questions:[{prompt,choices:[object,`a different ${category.name.toLowerCase()} idea`,`something the child would like to explore next`],answer:object}],completionCriteria:format.criteria,durationMinutes:5+(oi+fi)%11,accessibility:['Offer spoken or picture instructions','Allow pointing, speech, or gesture as a response','Use large, high-contrast materials when helpful','Provide a seated or low-movement option'],published:true});
+    }
+  }
+}
+if(rows.length!==1000)throw new Error(`Expected 1000 activities, generated ${rows.length}`);
+const output=resolve(here,'activities.generated.json');await writeFile(output,JSON.stringify(rows,null,2)+'\n','utf8');console.log(`Wrote ${rows.length} activity definitions to ${output}`);
