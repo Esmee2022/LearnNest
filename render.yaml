@@ -18,13 +18,13 @@ services:
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: PASSWORD_PEPPER
-        sync: false
+        generateValue: true
       - key: PEPPER_VERSION
         value: v1
       - key: TOTP_ENCRYPTION_KEY
-        sync: false
+        generateValue: true
       - key: BACKUP_ENCRYPTION_KEY
-        sync: false
+        generateValue: true
       - key: BACKUP_STORAGE_BUCKET
         value: learnnest-backups
       - key: WEB_ORIGIN
