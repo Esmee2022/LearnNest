@@ -11,7 +11,7 @@ import {auth} from './auth.js';
 import {db} from './db.js';
 import {audit} from './audit.js';
 import {allowRoles,requireAuth,requireRecentMfa} from './middleware.js';
-import {randomToken,digestToken,hashPassword,verifyPassword} from './security.js';
+import {randomToken,digestToken,hashPassword,verifyPassword,constantTimeTextEqual} from './security.js';
 import {sendAccountEmail} from './mail.js';
 
 dotenv.config({path:resolve(process.cwd(),'../../.env')});
@@ -20,7 +20,28 @@ const publicActivity=(row:any)=>({...row,questions:Array.isArray(row.questions)?
 app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'","https://fonts.googleapis.com"],fontSrc:["'self'","https://fonts.gstatic.com"],imgSrc:["'self'","data:","https:"],connectSrc:["'self'",process.env.SUPABASE_URL??"'self'"]}}}));
 app.use(cors({origin:(process.env.WEB_ORIGIN??'http://localhost:5173').split(',').map(s=>s.trim()),credentials:true}));app.use(express.json({limit:'1mb'}));app.use(cookieParser());app.use((req,res,next)=>{req.requestId=req.get('x-request-id')?.slice(0,100)??randomUUID();res.setHeader('X-Request-Id',req.requestId);next()});
 const loginLimiter=rateLimit({windowMs:15*60_000,limit:12,standardHeaders:'draft-7',legacyHeaders:false,message:{error:'Too many attempts. Please wait and try again.'}}) as unknown as express.RequestHandler;const signupLimiter=rateLimit({windowMs:60*60_000,limit:10,standardHeaders:'draft-7'}) as unknown as express.RequestHandler;app.use('/api/auth/login',loginLimiter);app.use('/api/auth/verify-2fa',loginLimiter);app.use('/api/auth/signup',signupLimiter);
-app.get('/api/health',(_req,res)=>res.json({ok:true,service:'LearnNest API',databaseConfigured:!!process.env.SUPABASE_URL&&!!process.env.SUPABASE_SERVICE_ROLE_KEY}));app.use('/api/auth',auth);
+app.get('/api/health',(_req,res)=>res.json({ok:true,service:'LearnNest API',databaseConfigured:!!process.env.SUPABASE_URL&&!!process.env.SUPABASE_SERVICE_ROLE_KEY}));
+const initialAdminLimiter=rateLimit({windowMs:60*60_000,limit:5,standardHeaders:'draft-7',legacyHeaders:false}) as unknown as express.RequestHandler;
+app.post('/api/setup/initial-super-admin',initialAdminLimiter,async(req,res,next)=>{try{
+ const setupToken=process.env.INITIAL_SUPER_ADMIN_SETUP_TOKEN;
+ const providedToken=req.get('x-super-admin-setup-token')??'';
+ if(!setupToken||Buffer.byteLength(setupToken)<32||!constantTimeTextEqual(providedToken,setupToken))return res.status(404).json({error:'Not found'});
+ const input=z.object({email:z.string().email().transform(v=>v.trim().toLowerCase()),password:z.string().min(12).max(128)}).strict().parse(req.body);
+ if(input.email!=='admin@gmail.com')return res.status(400).json({error:'This setup token is restricted to the configured initial administrator email'});
+ const {data:existing,error:existingError}=await db().from('users').select('id').eq('email',input.email).maybeSingle();if(existingError)throw existingError;if(existing)return res.status(409).json({error:'An account with this email already exists. Use the account recovery process instead.'});
+ const {data:superAdminRole,error:roleError}=await db().from('roles').select('id').eq('code','super_admin').single();if(roleError)throw roleError;
+ const {data:assignments,error:assignmentError}=await db().from('user_roles').select('user_id').eq('role_id',superAdminRole.id).limit(1);if(assignmentError)throw assignmentError;
+ if(assignments?.length)return res.status(409).json({error:'A super administrator is already configured'});
+ const secure=await hashPassword(input.password);
+ const {data:user,error:userError}=await db().from('users').insert({email:input.email,full_name:'LearnNest Super Administrator',status:'active'}).select('id').single();if(userError)throw userError;
+ try {
+  const {error:securityError}=await db().from('user_security').insert({user_id:user.id,password_hash:secure.hash,password_salt:secure.salt,algorithm:secure.algorithm,algorithm_parameters:secure.parameters,hash_scheme_version:secure.schemeVersion,pepper_version:secure.pepperVersion,two_factor_enabled:false});if(securityError)throw securityError;
+  const {error:roleWriteError}=await db().from('user_roles').insert({user_id:user.id,role_id:superAdminRole.id});if(roleWriteError)throw roleWriteError;
+  await audit({eventType:'account.initial_super_admin.created',actorId:user.id,targetId:user.id,outcome:'success',metadata:{email:input.email,requiresTwoFactorEnrollment:true},requestId:req.requestId});
+ } catch(error) { await db().from('users').delete().eq('id',user.id);throw error; }
+ return res.status(201).json({ok:true,email:input.email,role:'super_admin',requiresTwoFactorEnrollment:true,message:'Account created. Sign in and enroll an authenticator app before using administrative actions.'});
+}catch(e){next(e)}});
+app.use('/api/auth',auth);
 
 app.get('/api/roles',requireAuth,async(_req,res,next)=>{try{const {data,error}=await db().from('roles').select('code,name');if(error)throw error;res.json({roles:data})}catch(e){next(e)}});
 app.get('/api/users',requireAuth,allowRoles('super_admin','admin'),async(req,res,next)=>{try{const page=Math.max(1,Number(req.query.page)||1),limit=Math.min(100,Math.max(1,Number(req.query.limit)||25)),search=String(req.query.search??'').slice(0,120);let q=db().from('users').select('id,email,full_name,status,school_scope,created_at,last_login_at,user_roles(role_id,roles(code,name)),user_security(two_factor_enabled,algorithm,hash_scheme_version)',{count:'exact'}).is('deleted_at',null).order('created_at',{ascending:false}).range((page-1)*limit,page*limit-1);if(req.user!.role==='admin'){if(!req.user!.schoolScope)return res.status(403).json({error:'No administrative school scope is assigned'});q=q.eq('school_scope',req.user!.schoolScope)}if(search)q=q.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`);if(req.query.status)q=q.eq('status',String(req.query.status));const {data,error,count}=await q;if(error)throw error;const users=(data??[]).map((u:any)=>({id:u.id,email:u.email,name:u.full_name,status:u.status,createdAt:u.created_at,lastLoginAt:u.last_login_at,role:u.user_roles?.[0]?.roles?.code??'unassigned',twoFactorEnabled:!!u.user_security?.[0]?.two_factor_enabled,hashAlgorithm:u.user_security?.[0]?.algorithm??null,hashSchemeVersion:u.user_security?.[0]?.hash_scheme_version??null}));await audit({eventType:'admin.users.list',actorId:req.user!.id,outcome:'success',metadata:{page,limit},requestId:req.requestId});res.json({users,total:count??0,page,limit})}catch(e){next(e)}});

@@ -2,7 +2,7 @@
 
 ## First setup
 
-Apply the Supabase migration, configure secrets and SMTP, load activities, then create the first super-admin through a controlled seed/setup run. The sample seed is development-only and requires five separate environment passwords. Sign in, open **Security**, enroll a TOTP authenticator, and store the recovery codes securely. Do not use the development sample accounts in production.
+Apply the Supabase migration, configure secrets and SMTP, and load activities. To create the first production super-admin, deploy the API, then temporarily set a random `INITIAL_SUPER_ADMIN_SETUP_TOKEN` (at least 32 characters) in the `learnnest-api` Render service environment and redeploy. Call `POST /api/setup/initial-super-admin` with that token in the `x-super-admin-setup-token` header and `{ "email": "admin@gmail.com", "password": "your-new-password" }` as the JSON body. The endpoint only creates this fixed email, refuses if a super-admin already exists, rate-limits attempts, and hashes the password using the hosted API's pepper. Remove `INITIAL_SUPER_ADMIN_SETUP_TOKEN` from Render immediately after it succeeds. Never put the password or token in source control or share them in chat. The sample seed is development-only. Sign in, open **Security**, enroll a TOTP authenticator, and store the recovery codes securely. Do not use the development sample accounts in production.
 
 ## People and permissions
 
