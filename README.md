@@ -4,7 +4,7 @@ LearnNest is a Montessori-inspired learning platform for children aged 3–7 and
 
 ## Current implementation status
 
-- **Implemented in code:** role-aware web and mobile shells, parent registration and invitations, opaque sessions, password hashing, TOTP enrollment and verification, role checks in API middleware, learning activity browsing and progress recording, append-only hash-chained audit records, encrypted application-data exports, checksum/decryption verification, restore request history, and configuration settings operations.
+- **Implemented in code:** role-aware web and mobile shells, parent registration and teacher invitations, opaque sessions, Argon2id password hashing with a unique salt per account and server-only pepper, TOTP enrollment and verification, role checks in API middleware, learning activity browsing and progress recording, append-only hash-chained audit records, encrypted application-data exports, checksum/decryption verification, read-only restore previews, and configuration rollback limited to `ui.*` and `feature.*` settings.
 - **Needs configured Supabase and secrets:** database-backed login, cloud activity loading, account invitations, backups, and other database operations. Production uses Supabase PostgreSQL; the application does not use a local database.
 - **Recovery distinction:** the button creates an encrypted application-data export. It is not a full PostgreSQL snapshot and does not replace Supabase PITR. The separately confirmed application-data restore replaces learning/business data transactionally while preserving accounts, authentication data, sessions, audit history, configuration and the original backup. Full recovery uses the controlled Supabase PITR workflow described in [docs/recovery.md](docs/recovery.md).
 - **External setup required:** configure SMTP, Supabase, Vercel/Render, Expo EAS project/signing, and your production domains. No deployment has been performed from this workspace.
@@ -12,7 +12,7 @@ LearnNest is a Montessori-inspired learning platform for children aged 3–7 and
 ## Quick start
 
 1. Install Node.js 20 or newer.
-2. Create a Supabase project. In its SQL editor, apply `supabase/migrations/202610220001_learnnest_core.sql`.
+2. Create a Supabase project. In its SQL editor, apply the files in `supabase/migrations` in filename order. This creates the schema and backup bucket, then removes the legacy data-changing restore RPC so restore points remain read-only previews.
 3. In Supabase Storage, create a **private** bucket named `learnnest-backups`.
 4. Copy `.env.example` to `.env` in the repository root and set the Supabase project URL and service-role key, a random password pepper, a base64-encoded 32-byte TOTP encryption key, a base64-encoded 32-byte backup encryption key, and a random 32-byte access/session secret. Keep `.env` private.
 5. Run `npm install` and `npm run dev` from the repository root.

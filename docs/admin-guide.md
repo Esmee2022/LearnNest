@@ -6,7 +6,9 @@ Apply the Supabase migration, configure secrets and SMTP, load activities, then 
 
 ## People and permissions
 
-The People page shows account role/status, recent sign-in, and whether 2FA is enabled. Invitations are role-limited, one-time, and expire after 72 hours. Administrators can manage only accounts in their assigned school scope; they cannot create another administrator or change roles. Only a super administrator can assign roles, request restore operations, edit system settings, or create global backups. Sensitive operations need a recently verified 2FA session and a reason. User deletion soft-deactivates and anonymizes the profile while preserving the deletion record and audit history.
+The People page shows account role/status, recent sign-in, 2FA state, and password hashing algorithm metadata. It never exposes password hashes, salts, or peppers. Invitations are role-limited, one-time, and expire after 72 hours. Administrators can view and manage users in their assigned school scope, invite teachers, and delete users in that scope; they cannot create another administrator or change roles. Super administrators can view all users and assign roles. Sensitive operations need a recently verified 2FA session and a reason. User deletion anonymizes the profile, revokes sessions, erases password/2FA credentials, and preserves a minimal deletion record and append-only audit event.
+
+The native mobile app has a separate administrator dashboard with a scoped user directory, teacher invitations, and audited user deletion. Its administrative mutations also require a recently verified 2FA session.
 
 ## Audit, security and backups
 
