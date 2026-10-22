@@ -2,7 +2,7 @@ services:
   - type: web
     name: learnnest-api
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm install && npm run build --workspace @learnnest/shared && npm run build --workspace @learnnest/api
     startCommand: npm run start --workspace @learnnest/api
     healthCheckPath: /api/health

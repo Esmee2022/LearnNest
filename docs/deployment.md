@@ -6,7 +6,7 @@ Create a Vercel project with root directory `apps/web`, framework preset Vite, b
 
 ## Render (web + API)
 
-The root `render.yaml` is a Blueprint for both services. Push the repository to GitHub, then in Render choose **New → Blueprint**, connect the repository, and let Render read `render.yaml`. The API service builds and starts the Express workspace and checks `/api/health`; the static site builds the Vite workspace and publishes `apps/web/dist`.
+The root `render.yaml` is a Blueprint for both services. The API uses Render's `free` compute plan and the static site has no compute charge. Push the repository to GitHub, then in Render choose **New → Blueprint**, connect the repository, and let Render read `render.yaml`. The API service builds and starts the Express workspace and checks `/api/health`; the static site builds the Vite workspace and publishes `apps/web/dist`. Free API instances sleep after 15 minutes without requests and can take about a minute to wake, so use this for a demo or trial rather than a production preschool service.
 
 Before the first deploy, apply the Supabase migration and set the API secrets in Render. The Blueprint asks for `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PASSWORD_PEPPER`, `TOTP_ENCRYPTION_KEY`, `BACKUP_ENCRYPTION_KEY`, `WEB_ORIGIN`, and SMTP settings. Set `WEB_ORIGIN` to the static site's exact `https://<site>.onrender.com` origin. Set the static site's `VITE_API_URL` to the API's exact `https://<service>.onrender.com/api` URL. If Render assigns different service URLs than expected during Blueprint creation, update both values in each service's Environment page and redeploy the static site after changing `VITE_API_URL`. The two origins must match exactly for browser cookies and CORS.
 
